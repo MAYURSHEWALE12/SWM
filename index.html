@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SWM — Smart Waste Management</title>
+<meta name="description" content="SWM (Smart Waste Management) — report waste, get it cleaned, see the proof. A citizen-to-admin-to-worker waste management workflow.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231B4332'/%3E%3Ctext x='32' y='40' font-size='20' text-anchor='middle' fill='%23E8A33D' font-family='Georgia,serif' font-weight='700'%3ESMG%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --forest:#1B4332;
+    --forest-light:#2D6A4F;
+    --cream:#F8FAFC;
+    --paper:#FFFFFF;
+    --marigold:#E8A33D;
+    --clay:#C1502E;
+    --ink:#1A1A16;
+    --ink-soft:#5B5749;
+    --line:#E3DDC9;
+    --pending:#E8A33D;
+    --assigned:#4A7FB5;
+    --progress:#8B5FBF;
+    --resolved:#2D8659;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--cream);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Fraunces',serif;
+    letter-spacing:-0.01em;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  a{color:inherit;}
+  button{font-family:inherit;cursor:pointer;border:none;}
+  input,select,textarea{font-family:inherit;}
+  ::selection{background:var(--marigold);color:var(--ink);}
+
+  #app{min-height:100vh;display:flex;flex-direction:column;}
+
+  /* ---------- topbar ---------- */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 20px;background:var(--forest);color:var(--paper);
+    position:sticky;top:0;z-index:50;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem;cursor:pointer;}
+  .brand .mark{
+    width:44px;height:30px;border-radius:8px;background:var(--marigold);
+    display:flex;align-items:center;justify-content:center;color:var(--forest);font-weight:900;font-family:'Fraunces',serif;font-size:0.72rem;letter-spacing:.02em;
+  }
+  .topbar-right{display:flex;align-items:center;gap:10px;font-size:0.85rem;}
+  .pill-btn{
+    padding:8px 16px;border-radius:999px;font-weight:600;font-size:0.85rem;
+    background:var(--marigold);color:var(--forest);transition:transform .15s ease;
+  }
+  .pill-btn:hover{transform:translateY(-1px);}
+  .pill-btn.ghost{background:transparent;color:var(--paper);border:1px solid rgba(255,255,255,.35);}
+
+  main{flex:1;width:100%;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px;}
+
+  /* ---------- landing ---------- */
+  .hero{
+    padding:64px 20px 40px;text-align:center;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(232,163,61,.18), transparent 45%),
+      radial-gradient(circle at 85% 10%, rgba(27,67,50,.10), transparent 40%);
+  }
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--clay);background:rgba(193,80,46,.08);padding:6px 14px;border-radius:999px;margin-bottom:22px;
+  }
+  .hero h1{font-size:clamp(2.1rem,5vw,3.6rem);line-height:1.05;font-weight:700;margin:0 0 18px;color:var(--forest);}
+  .hero h1 em{font-style:italic;color:var(--clay);}
+  .hero p{font-size:1.08rem;color:var(--ink-soft);max-width:560px;margin:0 auto 30px;line-height:1.6;}
+  .hero-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+  .btn-primary{
+    background:var(--forest);color:var(--paper);padding:14px 28px;border-radius:999px;font-weight:700;font-size:0.95rem;
+    transition:transform .15s ease, box-shadow .15s ease;box-shadow:0 6px 18px rgba(27,67,50,.25);
+  }
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(27,67,50,.32);}
+  .btn-secondary{
+    background:transparent;color:var(--forest);padding:14px 28px;border-radius:999px;font-weight:700;font-size:0.95rem;
+    border:1.5px solid var(--forest);
+  }
+
+  .flow{padding:50px 20px 70px;}
+  .flow h2{text-align:center;font-size:1.7rem;color:var(--forest);margin-bottom:6px;}
+  .flow .sub{text-align:center;color:var(--ink-soft);margin-bottom:40px;font-size:0.95rem;}
+  .flow-track{
+    display:flex;gap:0;position:relative;max-width:960px;margin:0 auto;
+    overflow-x:auto;padding-bottom:8px;
+  }
+  .flow-step{flex:1;min-width:150px;text-align:center;padding:0 10px;position:relative;}
+  .flow-step::before{
+    content:'';position:absolute;top:24px;left:-50%;width:100%;height:2px;background:var(--line);z-index:0;
+  }
+  .flow-step:first-child::before{display:none;}
+  .flow-num{
+    width:48px;height:48px;border-radius:50%;background:var(--paper);border:2px solid var(--forest);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 12px;position:relative;z-index:1;
+    font-family:'Fraunces',serif;font-weight:700;color:var(--forest);
+  }
+  .flow-step p{font-size:0.82rem;color:var(--ink-soft);margin:0;line-height:1.4;}
+  .flow-step .flabel{font-weight:700;color:var(--ink);font-size:0.88rem;margin-bottom:4px;display:block;}
+
+  .roles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;padding:0 20px 70px;max-width:1080px;margin:0 auto;}
+  .role-card{
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:26px 22px;
+  }
+  .role-card .ricon{font-size:1.6rem;margin-bottom:10px;}
+  .role-card h3{margin:0 0 8px;font-size:1.15rem;color:var(--forest);}
+  .role-card p{margin:0;color:var(--ink-soft);font-size:0.87rem;line-height:1.55;}
+
+  /* ---------- auth ---------- */
+  .auth-wrap{max-width:420px;margin:60px auto;padding:0 20px;}
+  .auth-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:32px 28px;}
+  .auth-card h2{margin:0 0 6px;color:var(--forest);font-size:1.5rem;}
+  .auth-card .sub{color:var(--ink-soft);font-size:0.88rem;margin-bottom:24px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:0.8rem;font-weight:600;color:var(--ink-soft);margin-bottom:6px;}
+  .field input, .field select, .field textarea{
+    width:100%;padding:11px 13px;border-radius:9px;border:1.5px solid var(--line);background:var(--cream);
+    font-size:0.92rem;color:var(--ink);
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{outline:2px solid var(--marigold);outline-offset:1px;border-color:var(--marigold);}
+  .role-toggle{display:flex;gap:8px;margin-bottom:18px;}
+  .role-toggle button{
+    flex:1;padding:10px;border-radius:9px;border:1.5px solid var(--line);background:var(--cream);font-size:0.82rem;font-weight:600;color:var(--ink-soft);
+  }
+  .role-toggle button.active{background:var(--forest);color:var(--paper);border-color:var(--forest);}
+  .btn-block{width:100%;background:var(--forest);color:var(--paper);padding:13px;border-radius:9px;font-weight:700;font-size:0.94rem;}
+  .switch-line{text-align:center;margin-top:16px;font-size:0.85rem;color:var(--ink-soft);}
+  .switch-line button{background:none;color:var(--clay);font-weight:700;}
+
+  /* ---------- dashboard shell ---------- */
+  .dash{display:flex;min-height:calc(100vh - 62px);}
+  .sidebar{
+    width:220px;flex-shrink:0;background:var(--paper);border-right:1px solid var(--line);padding:20px 12px;
+  }
+  .sidebar .who{padding:10px 12px 18px;border-bottom:1px solid var(--line);margin-bottom:14px;}
+  .sidebar .who .name{font-weight:700;font-size:0.95rem;}
+  .sidebar .who .role{font-size:0.75rem;color:var(--ink-soft);text-transform:capitalize;}
+  .navitem{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;font-size:0.87rem;font-weight:600;
+    color:var(--ink-soft);margin-bottom:2px;background:transparent;width:100%;text-align:left;
+  }
+  .navitem.active{background:var(--forest);color:var(--paper);}
+  .navitem:hover:not(.active){background:var(--cream);}
+  .content{flex:1;padding:26px 28px;min-width:0;}
+  .content h2{color:var(--forest);margin:0 0 4px;font-size:1.5rem;}
+  .content .pagesub{color:var(--ink-soft);font-size:0.88rem;margin-bottom:22px;}
+
+  @media (max-width:760px){
+    .dash{flex-direction:column;}
+    .sidebar{width:100%;display:flex;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:10px;}
+    .sidebar .who{display:none;}
+    .navitem{white-space:nowrap;margin-bottom:0;margin-right:6px;}
+    .content{padding:18px 16px;}
+  }
+
+  /* ---------- stat cards ---------- */
+  .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:26px;}
+  .stat{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px 18px;}
+  .stat .n{font-family:'Fraunces',serif;font-size:1.8rem;font-weight:700;color:var(--forest);}
+  .stat .l{font-size:0.78rem;color:var(--ink-soft);font-weight:600;}
+  .stat.pending .n{color:var(--pending);}
+  .stat.assigned .n{color:var(--assigned);}
+  .stat.progress .n{color:var(--progress);}
+  .stat.resolved .n{color:var(--resolved);}
+
+  /* ---------- complaint cards ---------- */
+  .clist{display:flex;flex-direction:column;gap:12px;}
+  .ccard{
+    background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px;
+    display:flex;gap:14px;align-items:flex-start;cursor:pointer;transition:border-color .15s;
+  }
+  .ccard:hover{border-color:var(--marigold);}
+  .ccard img.thumb{width:64px;height:64px;border-radius:9px;object-fit:cover;flex-shrink:0;background:var(--line);}
+  .ccard .body{flex:1;min-width:0;}
+  .ccard .top{display:flex;justify-content:space-between;gap:8px;align-items:center;}
+  .ccard .cid{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--ink-soft);}
+  .ccard .itype{font-weight:700;font-size:0.95rem;margin:2px 0 4px;}
+  .ccard .meta{font-size:0.78rem;color:var(--ink-soft);}
+  .ccard .desc{font-size:0.83rem;color:var(--ink-soft);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  .badge{
+    font-size:0.72rem;font-weight:700;padding:4px 11px;border-radius:999px;white-space:nowrap;
+  }
+  .badge.pending{background:rgba(232,163,61,.18);color:#8a5c14;}
+  .badge.assigned{background:rgba(74,127,181,.18);color:#2c5883;}
+  .badge.progress{background:rgba(139,95,191,.18);color:#5c3a8a;}
+  .badge.resolved{background:rgba(45,134,89,.18);color:#1e6b46;}
+
+  .empty{
+    text-align:center;padding:50px 20px;color:var(--ink-soft);border:1.5px dashed var(--line);border-radius:12px;
+  }
+  .empty .ei{font-size:1.8rem;margin-bottom:10px;}
+
+  /* ---------- forms ---------- */
+  .form-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:26px;max-width:560px;}
+  .photo-drop{
+    border:1.5px dashed var(--line);border-radius:12px;padding:22px;text-align:center;cursor:pointer;background:var(--cream);
+  }
+  .photo-drop img{max-width:100%;max-height:200px;border-radius:9px;margin-top:10px;}
+  .btn-row{display:flex;gap:10px;margin-top:6px;}
+  .btn-ghost-sm{background:var(--cream);color:var(--ink);padding:9px 16px;border-radius:8px;font-weight:600;font-size:0.85rem;border:1px solid var(--line);}
+
+  /* ---------- detail page ---------- */
+  .detail-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:26px;max-width:680px;}
+  .detail-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;gap:10px;flex-wrap:wrap;}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0;}
+  .dfield .l{font-size:0.75rem;color:var(--ink-soft);font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
+  .dfield .v{font-size:0.92rem;margin-top:2px;}
+  .photo-compare{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0;}
+  .photo-compare .pbox{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--cream);}
+  .photo-compare .pbox img{width:100%;height:170px;object-fit:cover;display:block;}
+  .photo-compare .pbox .cap{padding:8px 10px;font-size:0.75rem;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;}
+  .backlink{background:none;color:var(--forest);font-weight:700;font-size:0.85rem;margin-bottom:16px;display:inline-flex;align-items:center;gap:4px;}
+
+  footer{text-align:center;padding:26px 20px;color:var(--ink-soft);font-size:0.78rem;border-top:1px solid var(--line);}
+
+  .toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+    background:var(--forest);color:var(--paper);padding:12px 22px;border-radius:999px;font-size:0.85rem;font-weight:600;
+    box-shadow:0 8px 20px rgba(0,0,0,.2);z-index:200;opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+
+  /* Enhanced Design Improvements */
+  .auth-card, .form-card, .detail-card, .stat, .role-card, .ccard {
+    box-shadow: 0 4px 24px rgba(27,67,50,.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .ccard:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 32px rgba(232,163,61,.15);
+  }
+  .topbar {
+    background: rgba(27,67,50, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .btn-block {
+    background: linear-gradient(135deg, var(--forest-light) 0%, var(--forest) 100%);
+    box-shadow: 0 4px 16px rgba(27,67,50,.2);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-block:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(27,67,50,.3);
+  }
+  input, select, textarea {
+    transition: all 0.2s ease;
+  }
+  input:focus, select:focus, textarea:focus {
+    box-shadow: 0 0 0 4px rgba(232,163,61,.2);
+  }
+  h2, h3, .brand {
+    letter-spacing: -0.02em;
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API_URL = 'http://localhost:5000/api';
+
+const ISSUE_TYPES = ["Garbage Dump","Overflowing Bin","Open Defecation Spot","Construction Debris","Drainage Blockage","Dead Animal","Other"];
+const STATUS_LABEL = {pending:"Pending", assigned:"Assigned", in_progress:"In Progress", resolved:"Resolved"};
+const STATUS_ICON = {pending:"⏳", assigned:"📌", in_progress:"🧹", resolved:"✅"};
+
+let state = {
+  user: null,          
+  view: "landing",
+  complaints: [],
+  workers: [],
+  dashboardStats: null,
+  activeComplaintId: null,
+  authRole: "citizen",
+  authAction: "login", 
+};
+
+function getHeaders() {
+  const token = localStorage.getItem('smg_token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+}
+
+async function loadData(){
+  if(state.user && state.user.role === 'admin') {
+    try {
+      const wRes = await fetch(API_URL + '/workers', { headers: getHeaders() });
+      if(wRes.ok) state.workers = await wRes.json();
+      
+      const sRes = await fetch(API_URL + '/stats/dashboard', { headers: getHeaders() });
+      if(sRes.ok) state.dashboardStats = await sRes.json();
+    } catch(e) {}
+  }
+  
+  if(state.user) {
+    try {
+      const cRes = await fetch(API_URL + '/complaints', { headers: getHeaders() });
+      if(cRes.ok) {
+        state.complaints = await cRes.json();
+        // remap _id to id for frontend compatibility
+        state.complaints = state.complaints.map(c => ({...c, id: c.complaintId || c._id}));
+      }
+    } catch(e) {}
+  }
+}
+
+async function initAuth() {
+  const token = localStorage.getItem('smg_token');
+  if(token) {
+    try {
+      const res = await fetch(API_URL + '/auth/profile', { headers: getHeaders() });
+      if(res.ok) {
+        const u = await res.json();
+        state.user = { name: u.name, role: u.role, phone: u.phone, id: u.id };
+        state.view = state.user.role === 'citizen' ? 'c-dashboard' : (state.user.role === 'admin' ? 'a-dashboard' : 'w-dashboard');
+      } else {
+        localStorage.removeItem('smg_token');
+      }
+    } catch(e) {
+      localStorage.removeItem('smg_token');
+    }
+  }
+  await loadData();
+  render();
+}
+
+function showToast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 2200);
+}
+
+function fmtDate(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}) + " · " + d.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+}
+function nav(view){ state.view = view; render(); window.scrollTo({top:0,behavior:"smooth"}); }
+
+function render(){
+  const app = document.getElementById("app");
+  app.innerHTML = "";
+  app.appendChild(Topbar());
+
+  const main = document.createElement("main");
+  if(!state.user){
+    if(state.view === "landing") main.appendChild(Landing());
+    else if(state.view === "auth") main.appendChild(Auth());
+  } else if(state.user.role === "citizen"){
+    main.appendChild(CitizenShell());
+  } else if(state.user.role === "admin"){
+    main.appendChild(AdminShell());
+  } else if(state.user.role === "worker"){
+    main.appendChild(WorkerShell());
+  }
+  app.appendChild(main);
+
+  if(!state.user){
+    const f = document.createElement("footer");
+    f.textContent = "SWM (Smart Waste Management) — a community waste-reporting platform";
+    app.appendChild(f);
+  }
+}
+
+function Topbar(){
+  const bar = el("div","topbar");
+  const brand = el("div","brand");
+  brand.innerHTML = `<span class="mark">SWM</span> Smart Waste Management`;
+  brand.onclick = ()=>{ if(!state.user) nav("landing"); };
+  bar.appendChild(brand);
+
+  const right = el("div","topbar-right");
+  if(state.user){
+    const span = document.createElement("span");
+    span.textContent = state.user.name + " · " + state.user.role;
+    right.appendChild(span);
+    const btn = el("button","pill-btn ghost");
+    btn.textContent = "Log out";
+    btn.onclick = ()=>{ 
+      state.user = null; 
+      localStorage.removeItem('smg_token');
+      state.view="landing"; 
+      state.authAction="login"; 
+      render(); 
+    };
+    right.appendChild(btn);
+  } else if(state.view !== "auth"){
+    const btn = el("button","pill-btn");
+    btn.textContent = "Login / Register";
+    btn.onclick = ()=> nav("auth");
+    right.appendChild(btn);
+  }
+  bar.appendChild(right);
+  return bar;
+}
+
+function Landing(){
+  const wrap = el("div");
+
+  const hero = el("div","hero");
+  hero.innerHTML = `
+    <div class="eyebrow">🌿 Community-powered cleanliness</div>
+    <h1>See waste. <em>Report it.</em><br/>Watch it disappear.</h1>
+    <p>SWM connects citizens, municipal admins and cleanup workers on one bridge — so a photo of an overflowing bin turns into a resolved street, with proof.</p>
+  `;
+  const cta = el("div","hero-cta");
+  const b1 = el("button","btn-primary"); b1.textContent="Report waste now"; b1.onclick=()=>{state.authRole="citizen";state.authAction="signup";nav("auth");};
+  const b2 = el("button","btn-secondary"); b2.textContent="Login to dashboard"; b2.onclick=()=>nav("auth");
+  cta.appendChild(b1); cta.appendChild(b2);
+  hero.appendChild(cta);
+  wrap.appendChild(hero);
+
+  const flow = el("div","flow");
+  flow.innerHTML = `<h2>How it works</h2><div class="sub">One complaint, six honest steps, zero guesswork.</div>`;
+  const track = el("div","flow-track");
+  const steps = [
+    ["Spot it","Citizen sees garbage or a mess nearby."],
+    ["Report it","Photo + location + description submitted."],
+    ["Reviewed","Admin checks the complaint and assigns a worker."],
+    ["Cleaned","Worker visits the spot and clears it."],
+    ["Verified","Admin checks the after-photo and confirms."],
+    ["Resolved","Citizen sees the before/after result."],
+  ];
+  steps.forEach((s,i)=>{
+    const st = el("div","flow-step");
+    st.innerHTML = `<div class="flow-num">${i+1}</div><span class="flabel">${s[0]}</span><p>${s[1]}</p>`;
+    track.appendChild(st);
+  });
+  flow.appendChild(track);
+  wrap.appendChild(flow);
+
+  const roles = el("div","roles");
+  const rdata = [
+    ["🧍","Citizen","Report waste in seconds, track every complaint's status, and see the before/after proof once it's cleaned."],
+    ["🛡️","Admin","Review incoming reports, assign the right worker, verify completed cleanups and watch city-wide stats."],
+    ["🧹","Worker","See only what's assigned to you, mark work in progress, and close it out with an after photo."],
+  ];
+  rdata.forEach(r=>{
+    const c = el("div","role-card");
+    c.innerHTML = `<div class="ricon">${r[0]}</div><h3>${r[1]}</h3><p>${r[2]}</p>`;
+    roles.appendChild(c);
+  });
+  wrap.appendChild(roles);
+
+  return wrap;
+}
+
+function Auth(){
+  const wrap = el("div","auth-wrap");
+  const card = el("div","auth-card");
+
+  const title = el("h2");
+  const sub = el("div","sub");
+  if(state.authRole === "admin"){
+    title.textContent = "Admin login";
+    sub.textContent = "Restricted access — admin credentials required.";
+  } else {
+    title.textContent = state.authAction === "signup" ? "Create your account" : "Welcome back";
+    sub.textContent = state.authAction === "signup"
+      ? "Sign up once — your account is saved so you can log in anytime after."
+      : "Log in with the phone number and password you signed up with.";
+  }
+  card.appendChild(title); card.appendChild(sub);
+
+  const toggle = el("div","role-toggle");
+  ["citizen","admin","worker"].forEach(r=>{
+    const b = el("button");
+    b.textContent = r[0].toUpperCase()+r.slice(1);
+    if(state.authRole===r) b.classList.add("active");
+    b.onclick = ()=>{ state.authRole = r; render(); };
+    toggle.appendChild(b);
+  });
+  card.appendChild(toggle);
+
+  if(state.authRole === "admin"){
+    AuthAdminForm(card);
+  } else {
+    const actionToggle = el("div","role-toggle"); actionToggle.style.marginBottom="20px";
+    ["login","signup"].forEach(a=>{
+      const b = el("button");
+      b.textContent = a==="login" ? "Log in" : "Sign up";
+      if(state.authAction===a) b.classList.add("active");
+      b.onclick = ()=>{ state.authAction = a; render(); };
+      actionToggle.appendChild(b);
+    });
+    card.appendChild(actionToggle);
+    AuthForm(card);
+  }
+  wrap.appendChild(card);
+  return wrap;
+}
+
+function AuthAdminForm(card){
+  const userField = el("div","field");
+  userField.innerHTML = `<label>Phone Number (Admin)</label>`;
+  const userInput = document.createElement("input");
+  userInput.placeholder = "0000000000";
+  userField.appendChild(userInput);
+  card.appendChild(userField);
+
+  const passField = el("div","field");
+  passField.innerHTML = `<label>Password</label>`;
+  const passInput = document.createElement("input");
+  passInput.type = "password";
+  passInput.placeholder = "Password";
+  passField.appendChild(passInput);
+  card.appendChild(passField);
+
+  const submit = el("button","btn-block");
+  submit.textContent = "Log in as Admin";
+  const doAdminLogin = async ()=>{
+    try {
+      const res = await fetch(API_URL + '/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: userInput.value.trim(), password: passInput.value })
+      });
+      const data = await res.json();
+      if(res.ok && data.role === 'admin') {
+        localStorage.setItem('smg_token', data.token);
+        state.user = {name: data.name, role: data.role, phone: data.phone, id: data._id};
+        showToast("Welcome Admin");
+        await loadData();
+        nav("a-dashboard");
+      } else {
+        showToast(data.message || "Login failed");
+      }
+    } catch(e) { showToast("Error connecting to server"); }
+  };
+  submit.onclick = doAdminLogin;
+  passInput.onkeydown = (e)=>{ if(e.key==="Enter") doAdminLogin(); };
+  card.appendChild(submit);
+}
+
+function AuthForm(card){
+  const isSignup = state.authAction === "signup";
+  let nameInput;
+  if(isSignup){
+    const nameField = el("div","field");
+    nameField.innerHTML = `<label>Full name</label>`;
+    nameInput = document.createElement("input");
+    nameInput.placeholder = "e.g. Prathamesh Deshmukh";
+    nameField.appendChild(nameInput);
+    card.appendChild(nameField);
+  }
+
+  const phoneField = el("div","field");
+  phoneField.innerHTML = `<label>Contact number</label>`;
+  const phoneInput = document.createElement("input");
+  phoneInput.placeholder = "10-digit mobile number";
+  phoneInput.maxLength = 10;
+  phoneField.appendChild(phoneInput);
+  card.appendChild(phoneField);
+
+  const passField = el("div","field");
+  passField.innerHTML = `<label>Password</label>`;
+  const passInput = document.createElement("input");
+  passInput.type = "password";
+  passInput.placeholder = isSignup ? "Create a password" : "Enter your password";
+  passField.appendChild(passInput);
+  card.appendChild(passField);
+
+  const submit = el("button","btn-block");
+  submit.textContent = isSignup ? "Create account" : "Log in";
+
+  const doSignup = async ()=>{
+    const name = nameInput.value.trim();
+    const phone = phoneInput.value.trim();
+    const pass = passInput.value;
+    if(!name || !phone || !pass) return showToast("Fill all fields");
+    try {
+      const res = await fetch(API_URL + '/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, password: pass, role: state.authRole })
+      });
+      const data = await res.json();
+      if(res.ok) {
+        localStorage.setItem('smg_token', data.token);
+        state.user = {name: data.name, role: data.role, phone: data.phone, id: data._id};
+        showToast("Account created!");
+        await loadData();
+        nav(state.authRole==="citizen" ? "c-dashboard" : "w-dashboard");
+      } else { showToast(data.message || "Signup failed"); }
+    } catch(e) { showToast("Error connecting to server"); }
+  };
+
+  const doLogin = async ()=>{
+    const phone = phoneInput.value.trim();
+    const pass = passInput.value;
+    if(!phone || !pass) return showToast("Fill all fields");
+    try {
+      const res = await fetch(API_URL + '/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, password: pass })
+      });
+      const data = await res.json();
+      if(res.ok && data.role === state.authRole) {
+        localStorage.setItem('smg_token', data.token);
+        state.user = {name: data.name, role: data.role, phone: data.phone, id: data._id};
+        showToast("Welcome back!");
+        await loadData();
+        nav(state.authRole==="citizen" ? "c-dashboard" : "w-dashboard");
+      } else { showToast(data.message || "Login failed / Wrong role"); }
+    } catch(e) { showToast("Error connecting to server"); }
+  };
+
+  submit.onclick = isSignup ? doSignup : doLogin;
+  card.appendChild(submit);
+
+  const switchLine = el("div","switch-line");
+  const switchBtn = document.createElement("button");
+  switchBtn.textContent = isSignup ? "Already have an account? Log in" : "New here? Create an account";
+  switchBtn.onclick = ()=>{ state.authAction = isSignup ? "login" : "signup"; render(); };
+  switchLine.appendChild(switchBtn);
+  card.appendChild(switchLine);
+}
+
+function DashShell(navItems, contentFn){
+  const dash = el("div","dash");
+  const side = el("div","sidebar");
+  const who = el("div","who");
+  who.innerHTML = `<div class="name">${state.user.name}</div><div class="role">${state.user.role}</div>`;
+  side.appendChild(who);
+  navItems.forEach(([key,label,icon])=>{
+    const b = el("button","navitem"+(state.view===key?" active":""));
+    b.innerHTML = `<span>${icon}</span><span>${label}</span>`;
+    b.onclick = ()=> {
+      if(key==='c-dashboard' || key==='a-dashboard' || key==='w-dashboard' || key.includes('my') || key.includes('all')) {
+        loadData().then(()=> nav(key));
+      } else {
+        nav(key);
+      }
+    }
+    side.appendChild(b);
+  });
+  dash.appendChild(side);
+  const content = el("div","content");
+  content.appendChild(contentFn());
+  dash.appendChild(content);
+  return dash;
+}
+
+function statCounts(list){
+  return {
+    total:list.length,
+    pending:list.filter(c=>c.status==="pending").length,
+    assigned:list.filter(c=>c.status==="assigned").length,
+    in_progress:list.filter(c=>c.status==="in_progress").length,
+    resolved:list.filter(c=>c.status==="resolved").length,
+  };
+}
+function StatRow(counts){
+  const row = el("div","stat-row");
+  const items = [["Total",counts.total,""],["Pending",counts.pending,"pending"],["Assigned",counts.assigned,"assigned"],["In Progress",counts.in_progress,"progress"],["Resolved",counts.resolved,"resolved"]];
+  items.forEach(([label,n,cls])=>{
+    const s = el("div","stat "+cls);
+    s.innerHTML = `<div class="n">${n}</div><div class="l">${label}</div>`;
+    row.appendChild(s);
+  });
+  return row;
+}
+
+function ComplaintCard(c, onClick){
+  const card = el("div","ccard");
+  card.onclick = onClick;
+  const img = document.createElement("img");
+  img.className = "thumb";
+  img.src = c.beforePhoto || PLACEHOLDER_IMG;
+  card.appendChild(img);
+  const body = el("div","body");
+  const badgeClass = c.status==="in_progress"?"progress":c.status;
+  body.innerHTML = `
+    <div class="top">
+      <span class="cid mono">${c.id}</span>
+      <span class="badge ${badgeClass}">${STATUS_ICON[c.status]} ${STATUS_LABEL[c.status]}</span>
+    </div>
+    <div class="itype">${c.issueType}</div>
+    <div class="meta">📍 ${c.location} · ${fmtDate(c.createdAt || c.dateTime)}</div>
+    <div class="desc">${c.description || ""}</div>
+  `;
+  card.appendChild(body);
+  return card;
+}
+
+const PLACEHOLDER_IMG = "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><rect width='64' height='64' fill='#E3DDC9'/><text x='32' y='38' font-size='26' text-anchor='middle'>🗑️</text></svg>`);
+
+function el(tag, cls){ const e = document.createElement(tag); if(cls) e.className = cls; return e; }
+
+/* ===================== CITIZEN ===================== */
+function CitizenShell(){
+  const items = [
+    ["c-dashboard","Dashboard","🏠"],
+    ["c-report","Report Waste","📷"],
+    ["c-mycomplaints","My Complaints","📋"],
+    ["c-profile","Profile","👤"],
+  ];
+  const map = {
+    "c-dashboard":CitizenDashboard,"c-report":CitizenReport,"c-mycomplaints":CitizenMyComplaints,
+    "c-profile":CitizenProfile,"c-detail":()=>ComplaintDetail("citizen"),
+  };
+  if(!map[state.view]) state.view = "c-dashboard";
+  return DashShell(items, map[state.view]);
+}
+
+function CitizenDashboard(){
+  const wrap = el("div");
+  wrap.innerHTML = `<h2>Welcome, ${state.user.name.split(" ")[0]}</h2><div class="pagesub">Here's a snapshot of everything you've reported.</div>`;
+  const mine = state.complaints;
+  wrap.appendChild(StatRow(statCounts(mine)));
+  const recentTitle = el("h3"); recentTitle.style.margin="0 0 12px"; recentTitle.style.fontSize="1.05rem"; recentTitle.textContent="Recent reports";
+  wrap.appendChild(recentTitle);
+  wrap.appendChild(ComplaintListOrEmpty(mine.slice(0,5), "citizen", "You haven't reported anything yet — spotted some waste nearby?"));
+  return wrap;
+}
+
+function ComplaintListOrEmpty(list, role, emptyMsg){
+  if(list.length===0){
+    const e = el("div","empty");
+    e.innerHTML = `<div class="ei">🧺</div>${emptyMsg}`;
+    return e;
+  }
+  const wrap = el("div","clist");
+  list.forEach(c=>{
+    wrap.appendChild(ComplaintCard(c, ()=>{
+      state.activeComplaintId = c._id || c.id;
+      nav(role==="citizen"?"c-detail": role==="admin"?"a-detail":"w-detail");
+    }));
+  });
+  return wrap;
+}
+
+function CitizenReport(){
+  const wrap = el("div");
+  wrap.innerHTML = `<h2>Report waste</h2><div class="pagesub">A clear photo and accurate location help the worker find and clear it fast.</div>`;
+  const card = el("div","form-card");
+
+  const photoField = el("div","field");
+  photoField.innerHTML = `<label>Photo of the waste</label>`;
+  const drop = el("div","photo-drop");
+  drop.innerHTML = `<div>📷 Tap to upload a photo</div>`;
+  const fileInput = document.createElement("input");
+  fileInput.type="file"; fileInput.accept="image/*"; fileInput.style.display="none";
+  let photoData = null;
+  drop.onclick = ()=> fileInput.click();
+  fileInput.onchange = (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      compressImage(reader.result, 700, (compressed)=>{
+        photoData = compressed;
+        drop.innerHTML = `<div>✓ Photo attached — tap to change</div><img src="${compressed}"/>`;
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+  photoField.appendChild(drop); photoField.appendChild(fileInput);
+  card.appendChild(photoField);
+
+  const typeField = el("div","field");
+  typeField.innerHTML = `<label>Issue type</label>`;
+  const typeSel = document.createElement("select");
+  ISSUE_TYPES.forEach(t=>{ const o=document.createElement("option"); o.value=t; o.textContent=t; typeSel.appendChild(o); });
+  typeField.appendChild(typeSel);
+  card.appendChild(typeField);
+
+  const locField = el("div","field");
+  locField.innerHTML = `<label>Location</label>`;
+  const locInput = document.createElement("input");
+  locInput.placeholder = "e.g. Near FC Road bus stop, Pune";
+  locField.appendChild(locInput);
+  const locBtnRow = el("div","btn-row"); locBtnRow.style.marginTop="8px";
+  const gpsBtn = el("button","btn-ghost-sm"); gpsBtn.textContent="📍 Use current GPS location";
+  gpsBtn.onclick = ()=>{
+    if(!navigator.geolocation){ showToast("Location not supported on this device."); return; }
+    navigator.geolocation.getCurrentPosition(pos=>{
+      locInput.value = pos.coords.latitude.toFixed(5)+", "+pos.coords.longitude.toFixed(5);
+    }, ()=> showToast("Couldn't fetch location — enter it manually."));
+  };
+  locBtnRow.appendChild(gpsBtn);
+  locField.appendChild(locBtnRow);
+  card.appendChild(locField);
+
+  const descField = el("div","field");
+  descField.innerHTML = `<label>Description</label>`;
+  const descArea = document.createElement("textarea");
+  descArea.rows = 3;
+  descArea.placeholder = "Describe what you saw...";
+  descField.appendChild(descArea);
+  card.appendChild(descField);
+
+  const submit = el("button","btn-block");
+  submit.textContent = "Submit complaint";
+  submit.onclick = async ()=>{
+    if(!locInput.value.trim() || !photoData){ showToast("Please add location and photo."); return; }
+    submit.textContent = "Submitting...";
+    try {
+      const res = await fetch(API_URL + '/complaints', {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({
+          issueType: typeSel.value,
+          location: locInput.value.trim(),
+          description: descArea.value.trim(),
+          beforePhoto: photoData
+        })
+      });
+      if(res.ok) {
+        showToast("Complaint submitted successfully!");
+        await loadData();
+        nav("c-mycomplaints");
+      } else { showToast("Failed to submit."); submit.textContent = "Submit complaint"; }
+    } catch(e) { showToast("Error connecting to server"); submit.textContent = "Submit complaint"; }
+  };
+  card.appendChild(submit);
+  wrap.appendChild(card);
+  return wrap;
+}
+
+function compressImage(dataUrl, maxW, cb){
+  const img = new Image();
+  img.onload = ()=>{
+    const scale = Math.min(1, maxW / img.width);
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width*scale; canvas.height = img.height*scale;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    cb(canvas.toDataURL("image/jpeg",0.72));
+  };
+  img.src = dataUrl;
+}
+
+function CitizenMyComplaints(){
+  const wrap = el("div");
+  wrap.innerHTML = `<h2>My complaints</h2><div class="pagesub">Every report you've submitted, with live status.</div>`;
+  wrap.appendChild(ComplaintListOrEmpty(state.complaints, "citizen", "No complaints yet — go report some waste!"));
+  return wrap;
+}
+
+function CitizenProfile(){
+  const wrap = el("div");
+  wrap.innerHTML = `<h2>Profile</h2><div class="pagesub">Your account details for this session.</div>`;
+  const card = el("div","form-card");
+  const mine = state.complaints;
+  card.innerHTML = `
+    <div class="detail-grid">
+      <div class="dfield"><div class="l">Name</div><div class="v">${state.user.name}</div></div>
+      <div class="dfield"><div class="l">Role</div><div class="v">Citizen</div></div>
+      <div class="dfield"><div class="l">Total reports</div><div class="v">${mine.length}</div></div>
+      <div class="dfield"><div class="l">Resolved</div><div class="v">${mine.filter(c=>c.status==="resolved").length}</div></div>
+    </div>
+  `;
+  wrap.appendChild(card);
+  return wrap;
+}
+
+/* ===================== SHARED DETAIL PAGE ===================== */
+function ComplaintDetail(role){
+  const wrap = el("div");
+  const c = state.complaints.find(x=>(x._id || x.id)===state.activeComplaintId);
+  if(!c){ wrap.innerHTML = `<div class="empty">Complaint not found.</div>`; return wrap; }
+
+  const back = el("button","backlink");
+  back.innerHTML = "← Back";
+  back.onclick = ()=> { loadData().then(()=> nav(role==="citizen"?"c-mycomplaints": role==="admin"?"a-all":"w-assigned")); };
+  wrap.appendChild(back);
+
+  const card = el("div","detail-card");
+  const badgeClass = c.status==="in_progress"?"progress":c.status;
+  const head = el("div","detail-head");
+  head.innerHTML = `
+    <div><div class="cid mono" style="font-size:0.8rem;color:var(--ink-soft);">${c.id}</div><h2 style="margin:4px 0 0;">${c.issueType}</h2></div>
+    <span class="badge ${badgeClass}">${STATUS_ICON[c.status]} ${STATUS_LABEL[c.status]}</span>
+  `;
+  card.appendChild(head);
+
+  const grid = el("div","detail-grid");
+  grid.innerHTML = `
+    <div class="dfield"><div class="l">Reported by</div><div class="v">${c.citizenName}</div></div>
+    <div class="dfield"><div class="l">Date & time</div><div class="v">${fmtDate(c.createdAt)}</div></div>
+    <div class="dfield"><div class="l">Location</div><div class="v">📍 ${c.location}</div></div>
+    <div class="dfield"><div class="l">Assigned worker</div><div class="v">${c.assignedWorker ? c.assignedWorker.name : "— Not yet assigned"}</div></div>
+  `;
+  card.appendChild(grid);
+
+  if(c.description){
+    const d = el("div","dfield"); d.style.marginBottom="16px";
+    d.innerHTML = `<div class="l">Description</div><div class="v">${c.description}</div>`;
+    card.appendChild(d);
+  }
+
+  const compare = el("div","photo-compare");
+  compare.innerHTML = `
+    <div class="pbox"><img src="${c.beforePhoto || PLACEHOLDER_IMG}"/><div class="cap">Before</div></div>
+    <div class="pbox"><img src="${c.afterPhoto || PLACEHOLDER_IMG}"/><div class="cap">${c.afterPhoto ? "After" : "Awaiting cleanup"}</div></div>
+  `;
+  card.appendChild(compare);
+
+  // ROLE-SPECIFIC ACTIONS
+  if(role==="admin"){
+    if(c.status==="pending"){
+      const assignBox = el("div","field");
+      assignBox.innerHTML = `<label>Assign a worker</label>`;
+      const sel = document.createElement("select");
+      state.workers.forEach(w=>{ const o=document.createElement("option"); o.value=w._id; o.textContent=w.name; sel.appendChild(o); });
+      assignBox.appendChild(sel);
+      const btn = el("button","btn-block"); btn.style.marginTop="10px"; btn.textContent="Assign worker";
+      btn.onclick = async ()=>{
+        const res = await fetch(API_URL + '/complaints/' + c._id + '/assign', {
+          method: 'PATCH',
+          headers: getHeaders(),
+          body: JSON.stringify({ workerId: sel.value })
+        });
+        if(res.ok) {
+          showToast("Assigned successfully");
+          await loadData();
+          nav("a-detail");
+        }
+      };
+      card.appendChild(assignBox); card.appendChild(btn);
+    }
+    if(c.status==="in_progress" && c.afterPhoto){
+      const btn = el("button","btn-block"); btn.style.marginTop="14px"; btn.textContent="Verify & mark Resolved";
+      btn.onclick = async ()=>{ 
+        const res = await fetch(API_URL + '/complaints/' + c._id + '/resolve', {
+          method: 'PATCH',
+          headers: getHeaders()
+        });
+        if(res.ok) { showToast("Marked resolved ✅"); await loadData(); nav("a-detail"); }
+      };
+      card.appendChild(btn);
+    }
+  }
+
+  if(role==="worker"){
+    if(c.status==="assigned"){
+      const btn = el("button","btn-block"); btn.style.marginTop="14px"; btn.textContent="Start cleaning (mark In Progress)";
+      btn.onclick = async ()=>{ 
+        const res = await fetch(API_URL + '/complaints/' + c._id + '/status', {
+          method: 'PATCH',
+          headers: getHeaders(),
+          body: JSON.stringify({ status: 'in_progress' })
+        });
+        if(res.ok) { showToast("Marked in progress"); await loadData(); nav("w-detail"); }
+      };
+      card.appendChild(btn);
+    }
+    if(c.status==="in_progress"){
+      const upField = el("div","field"); upField.style.marginTop="14px";
+      upField.innerHTML = `<label>Upload after-cleaning photo</label>`;
+      const drop = el("div","photo-drop");
+      drop.innerHTML = c.afterPhoto ? `<div>✓ Photo attached — tap to change</div><img src="${c.afterPhoto}"/>` : `<div>📷 Tap to upload after photo</div>`;
+      const fi = document.createElement("input"); fi.type="file"; fi.accept="image/*"; fi.style.display="none";
+      drop.onclick = ()=> fi.click();
+      let newAfterPhoto = c.afterPhoto;
+      fi.onchange = (e)=>{
+        const file = e.target.files[0]; if(!file) return;
+        const reader = new FileReader();
+        reader.onload = ()=> compressImage(reader.result,700,(comp)=>{ 
+          newAfterPhoto = comp; 
+          drop.innerHTML = `<div>✓ Photo ready to submit</div><img src="${comp}"/>`; 
+        });
+        reader.readAsDataURL(file);
+      };
+      upField.appendChild(drop); upField.appendChild(fi);
+      card.appendChild(upField);
+
+      const btn = el("button","btn-block"); btn.style.marginTop="10px"; btn.textContent="Submit for verification";
+      btn.onclick = async ()=>{ 
+        if(!newAfterPhoto) return showToast("Please upload a photo first.");
+        const res = await fetch(API_URL + '/complaints/' + c._id + '/status', {
+          method: 'PATCH',
+          headers: getHeaders(),
+          body: JSON.stringify({ status: 'in_progress', afterPhoto: newAfterPhoto })
+        });
+        if(res.ok) { showToast("Sent to admin for verification"); await loadData(); nav("w-assigned"); }
+      };
+      card.appendChild(btn);
+    }
+    if(c.status==="resolved"){
+      const note = el("div"); note.style.cssText="margin-top:14px;color:var(--resolved);font-weight:700;font-size:0.88rem;";
+      note.textContent = "✅ Verified and resolved by admin.";
+      card.appendChild(note);
+    }
+  }
+
+  wrap.appendChild(card);
+  return wrap;
+}
+
+/* ===================== ADMIN ===================== */
+function AdminShell(){
+  const items = [
+    ["a-dashboard","Dashboard","🏠"],
+    ["a-all","All Complaints","📋"],
+    ["a-workers","Workers","🧑‍🔧"],
+    ["a-reports","Reports","📊"],
+  ];
+  const map = {
+    "a-dashboard":AdminDashboard,"a-all":AdminAllComplaints,"a-workers":AdminWorkers,
+    "a-reports":AdminReports,"a-detail":()=>ComplaintDetail("admin"),
+  };
+  if(!map[state.view]) state.view="a-dashboard";
+  return DashShell(items, map[state.view]);
+}
+
+function AdminDashboard(){
+  const wrap = el("div");
+  wrap.innerHTML = `<h2>Admin dashboard</h2><div class="pagesub">City-wide view of every complaint reported.</div>`;
+  wrap.appendChild(StatRow(statCounts(state.complaints)));
+  const t = el("h3"); t.style.cssText="margin:0 0 12px;font-size:1.05rem;"; t.textContent="Needs attention (pending)";
+  wrap.appendChild(t);
+  const pending = state.complaints.filter(c=>c.status==="pending");
+  wrap.appendChild(ComplaintListOrEmpty(pending, "admin", "No pending complaints — all caught up! 🎉"));
+  return wrap;
+}
+
+function AdminAllComplaints(){
+  const wrap = el("div");
+  wrap.innerHTML = `<h2>All complaints</h2><div class="pagesub">Every report across the city, most recent first.</div>`;
+  const filterRow = el("div","btn-row"); filterRow.style.marginBottom="16px"; filterRow.style.flexWrap="wrap";
+  let activeFilter = "all";
+  function renderList(){
+    const list = state.complaints.filter(c=> activeFilter==="all" || c.status===activeFilter);
+    const existing = wrap.querySelector(".clist, .empty");
+    const rendered = ComplaintListOrEmpty(list, "admin", "No complaints match this filter.");
+    if(existing) existing.replaceWith(rendered); else wrap.appendChild(rendered);
+  }
+  ["all","pending","assigned","in_progress","resolved"].forEach(f=>{
+    const b = el("button","btn-ghost-sm");
+    b.textContent = f==="all"?"All": STATUS_LABEL[f];
+    b.style.marginBottom="6px";
+    b.onclick = ()=>{ activeFilter=f; renderList(); };
+    filterRow.appendChild(b);
+  });
+  wrap.appendChild(filterRow);
+  wrap.appendChild(ComplaintListOrEmpty(state.complaints, "admin", "No complaints reported yet."));
+  return wrap;
+}
+
+function AdminWorkers(){
+  const wrap = el("div");
+  wrap.innerHTML = `<h2>Worker management</h2><div class="pagesub">Cleanup workers assigned to complaints.</div>`;
+  const listTitle = el("h3"); listTitle.style.cssText="margin:24px 0 12px;font-size:1.05rem;"; listTitle.textContent="Current workers";
+  wrap.appendChild(listTitle);
+  const list = el("div","clist");
+  state.workers.forEach(w=>{
+    const row = el("div","ccard"); row.style.cursor="default";
+    row.innerHTML = `<div class="body"><div class="itype">${w.name}</div><div class="meta mono">${w.workerId || 'No ID'} · ${w.assignedCount || 0} active assignments</div></div>`;
+    list.appendChild(row);
+  });
+  if(state.workers.length===0) list.innerHTML = '<div class="empty">No workers found. Create a worker account via registration.</div>';
+  wrap.appendChild(list);
+  return wrap;
+}
+
+function AdminReports(){
+  const wrap = el("div");
+  wrap.innerHTML = `<h2>Reports & statistics</h2><div class="pagesub">A quick read on how the city is doing.</div>`;
+  if(!state.dashboardStats) return wrap;
+  
+  const counts = state.dashboardStats.counts;
+  wrap.appendChild(StatRow(counts));
+
+  const byType = state.dashboardStats.issueTypes || {};
+  const card = el("div","form-card"); card.style.maxWidth="640px";
+  const title = el("h3"); title.style.cssText="margin:0 0 14px;font-size:1rem;color:var(--forest);"; title.textContent="Complaints by issue type";
+  card.appendChild(title);
+  const maxV = Math.max(1,...Object.values(byType));
+  Object.entries(byType).forEach(([type,n])=>{
+    const row = el("div"); row.style.marginBottom="10px";
+    row.innerHTML = `<div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:4px;"><span>${type}</span><span class="mono">${n}</span></div>
+      <div style="background:var(--cream);border-radius:6px;height:8px;overflow:hidden;"><div style="background:var(--marigold);height:100%;width:${(n/maxV)*100}%;"></div></div>`;
+    card.appendChild(row);
+  });
+  if(Object.keys(byType).length===0){ card.innerHTML += `<div class="empty">No data yet.</div>`; }
+  const resRate = state.dashboardStats.resolutionRate;
+  const rr = el("div"); rr.style.cssText="margin-top:18px;font-size:0.88rem;color:var(--ink-soft);";
+  rr.innerHTML = `Resolution rate: <strong class="mono" style="color:var(--forest);">${resRate}%</strong> (${counts.resolved} of ${counts.total} resolved)`;
+  card.appendChild(rr);
+  wrap.appendChild(card);
+  return wrap;
+}
+
+/* ===================== WORKER ===================== */
+function WorkerShell(){
+  const items = [
+    ["w-dashboard","Dashboard","🏠"],
+    ["w-assigned","Assigned Complaints","📌"],
+    ["w-completed","Completed Works","✅"],
+  ];
+  const map = {
+    "w-dashboard":WorkerDashboard,"w-assigned":WorkerAssigned,"w-completed":WorkerCompleted,
+    "w-detail":()=>ComplaintDetail("worker"),
+  };
+  if(!map[state.view]) state.view="w-dashboard";
+  return DashShell(items, map[state.view]);
+}
+
+function WorkerDashboard(){
+  const wrap = el("div");
+  wrap.innerHTML = `<h2>Welcome, ${state.user.name.split(" ")[0]}</h2><div class="pagesub">Your cleanup workload at a glance.</div>`;
+  const mine = state.complaints;
+  wrap.appendChild(StatRow(statCounts(mine)));
+  const t = el("h3"); t.style.cssText="margin:0 0 12px;font-size:1.05rem;"; t.textContent="Active assignments";
+  wrap.appendChild(t);
+  const active = mine.filter(c=>c.status==="assigned"||c.status==="in_progress");
+  wrap.appendChild(ComplaintListOrEmpty(active, "worker", "Nothing assigned to you right now."));
+  return wrap;
+}
+
+function WorkerAssigned(){
+  const wrap = el("div");
+  wrap.innerHTML = `<h2>Assigned complaints</h2><div class="pagesub">Everything currently on your plate.</div>`;
+  const mine = state.complaints.filter(c=>c.status==="assigned"||c.status==="in_progress");
+  wrap.appendChild(ComplaintListOrEmpty(mine, "worker", "No active assignments."));
+  return wrap;
+}
+
+function WorkerCompleted(){
+  const wrap = el("div");
+  wrap.innerHTML = `<h2>Completed works</h2><div class="pagesub">Complaints you've cleaned and admin has verified.</div>`;
+  const mine = state.complaints.filter(c=>c.status==="resolved");
+  wrap.appendChild(ComplaintListOrEmpty(mine, "worker", "No completed works yet."));
+  return wrap;
+}
+
+initAuth();
+</script>
+</body>
+</html>
